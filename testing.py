@@ -3,17 +3,19 @@
 # Let's fine tune LLAMA2, or die trying...
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from datasets import load_dataset
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from torchtune.modules.peft import LoRALinear
 from bitsandbytes import BitsAndBytesConfig
 
-import bitsandbytes as bnb
 
-
+import torch
 import time
 
 start = time.time()
 
 # This is just a random model. Doesn't really matter...
-model_name = "bigscience/bloomz-560m"  # Example model; you can replace it with a larger one
+model_name = "bigscience/bloomz-560m"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # Load the model using 4-bit quantization with bitsandbytes
@@ -29,7 +31,6 @@ model = AutoModelForCausalLM.from_pretrained(
     )
 )
 
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 # Prepare model for k-bit fine-tuning
 model = prepare_model_for_kbit_training(model)
@@ -47,12 +48,10 @@ lora_config = LoraConfig(
 # Wrap the model with QLoRA
 lora_model = get_peft_model(model, lora_config)
 
-from datasets import load_dataset
-
-# Load a dataset for fine-tuning (e.g., a small subset of wikitext)
+# Loads, tokenizes dataset for fine-tuning (subset of wikipedia)
 dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
 
-# Tokenize the dataset
+
 def tokenize_function(examples):
     return tokenizer(examples["text"], padding="max_length", truncation=True)
 
@@ -72,7 +71,8 @@ training_args = TrainingArguments(
     evaluation_strategy="steps",
     eval_steps=100,
     save_total_limit=2,
-    fp16=True,  # Mixed precision for faster training
+    fp16=True,  # Mixed precision for faster training,
+    optim='paged_adamw_8bit' # This reduces space (trust me)
 )
 
 # Initialize Trainer with the LoRA model
