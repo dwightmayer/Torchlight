@@ -48,9 +48,19 @@ train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in train_d
 
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, n_heads, num_layers, **kwargs):
+    def __init__(
+        self,
+        vocab_size=None,
+        embedding_dim=64,
+        hidden_dim=128,
+        n_heads=8,
+        num_layers=2,
+        sequence_length=5,
+        **kwargs
+    ):
         super().__init__(**kwargs)
-        self.vocab_size = vocab_size
+        # Set defaults if not provided
+        self.vocab_size = vocab_size if vocab_size is not None else 10000
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.n_heads = n_heads
@@ -92,7 +102,9 @@ class TransformerLM(PreTrainedModel):
 
         return {"loss": loss, "logits": logits}
 
+    # This should not be a static method. PyCharm is mistaken imo.
     def generate_positional_encoding(self, dim, max_len):
+        # This gets the positional encoding
         pos_enc = torch.zeros(max_len, dim)
         pos = torch.arange(0, max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, dim, 2) * -(np.log(10000.0) / dim))
@@ -101,8 +113,12 @@ class TransformerLM(PreTrainedModel):
         return pos_enc.unsqueeze(0)
 
 
-# Instantiate the model and configuration
-config = TransformerLMConfig(vocab_size=vocab_size, embedding_dim=64, hidden_dim=128, n_heads=8, num_layers=2)
+# Instantiate the model and configuration. This restates the default arguments of the class. Problematic?
+config = TransformerLMConfig(vocab_size=vocab_size,
+                             embedding_dim=64,
+                             hidden_dim=128,
+                             n_heads=8,
+                             num_layers=2)
 model = TransformerLM(config)
 
 # Training arguments
@@ -120,10 +136,12 @@ training_args = TrainingArguments(
 
 # Define Trainer
 trainer = Trainer(
-    model=model,                 # The model to train
-    args=training_args,          # Training arguments
-    train_dataset=train_dataset, # Training dataset
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
 )
 
 # Train the model
 trainer.train()
+print(len(tokens))
+
