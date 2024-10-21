@@ -2,97 +2,128 @@
 
 # Let's fine tune LLAMA2, or die trying...
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from datasets import load_dataset
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from torchtune.modules.peft import LoRALinear
-from bitsandbytes import BitsAndBytesConfig
-
-
 import torch
+from torch import nn
+from transformers import Trainer, TrainingArguments
+from datasets import Dataset
+from transformers import PreTrainedModel, PretrainedConfig
+import numpy as np
 import time
 
-start = time.time()
+# Sample data
+text = "Four score and seven years ago..."
 
-# This is just a random model. Doesn't really matter...
-model_name = "bigscience/bloomz-560m"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-# Load the model using 4-bit quantization with bitsandbytes
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    load_in_4bit=True,   # This enables 4-bit quantization
-    device_map="auto",
-    quantization_config=BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,   # Optional, enables double quantization
-        bnb_4bit_quant_type="nf4",        # Quantization type (NF4 is recommended for QLoRA)
-        bnb_4bit_compute_dtype=torch.float16  # Reduce computation precision for efficiency
-    )
-)
+with open('sample_text.txt', 'r') as f:
+    text = f.read()
 
 
-# Prepare model for k-bit fine-tuning
-model = prepare_model_for_kbit_training(model)
+# Tokenization and vocabulary creation
+tokens = text.lower().split()
+vocab = sorted(set(tokens))
+vocab_size = len(vocab)
 
-# Define the LoRA configuration
-lora_config = LoraConfig(
-    r=8,                  # LoRA rank
-    lora_alpha=32,        # Scaling factor
-    target_modules=["q_proj", "v_proj"],  # Apply LoRA to specific attention layers
-    lora_dropout=0.1,     # Optional, to prevent overfitting
-    bias="none",          # No additional biases are learned
-    task_type="CAUSAL_LM" # Language modeling task
-)
+# Create word to index and index to word mappings
+word_to_idx = {word: idx for idx, word in enumerate(vocab)}
+idx_to_word = {idx: word for idx, word in enumerate(vocab)}
 
-# Wrap the model with QLoRA
-lora_model = get_peft_model(model, lora_config)
+# Convert text to sequence of indices
+input_sequence = [word_to_idx[word] for word in tokens]
+sequence_length = 5  # Window size
 
-# Loads, tokenizes dataset for fine-tuning (subset of wikipedia)
-dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
+# Create sequences
+def create_sequences(input_sequence, sequence_length):
+    sequences = []
+    for i in range(len(input_sequence) - sequence_length):
+        seq = input_sequence[i:i + sequence_length]
+        target = input_sequence[i + sequence_length]
+        sequences.append({'input_ids': seq, 'labels': target})
+    return sequences
 
 
-def tokenize_function(examples):
-    return tokenizer(examples["text"], padding="max_length", truncation=True)
+# Prepare dataset
+train_data = create_sequences(input_sequence, sequence_length)
+train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in train_data],
+                                   'labels': [x['labels'] for x in train_data]})
 
-tokenized_dataset = dataset.map(tokenize_function, batched=True)
 
-from transformers import Trainer, TrainingArguments
+# Model Config class for Hugging Face compatibility
+class TransformerLMConfig(PretrainedConfig):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, n_heads, num_layers, **kwargs):
+        super().__init__(**kwargs)
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.n_heads = n_heads
+        self.num_layers = num_layers
+        self.sequence_length = sequence_length
 
-# Define training arguments
+
+# Define the Transformer Model using Hugging Face's PreTrainedModel
+class TransformerLM(PreTrainedModel):
+    config_class = TransformerLMConfig
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        # Embedding layer
+        self.embedding = nn.Embedding(config.vocab_size, config.embedding_dim)
+
+        # Positional encoding
+        self.pos_encoding = self.generate_positional_encoding(config.embedding_dim, config.sequence_length)
+
+        # Transformer layers
+        transformer_layer = nn.TransformerEncoderLayer(d_model=config.embedding_dim,
+                                                       nhead=config.n_heads,
+                                                       dim_feedforward=config.hidden_dim)
+        self.transformer = nn.TransformerEncoder(transformer_layer, num_layers=config.num_layers)
+
+        # Final linear layer for word prediction
+        self.fc = nn.Linear(config.embedding_dim, config.vocab_size)
+
+    def forward(self, input_ids, labels=None):
+        embeds = self.embedding(input_ids) + self.pos_encoding[:input_ids.size(1), :]
+        transformer_out = self.transformer(embeds)
+        logits = self.fc(transformer_out[:, -1, :])
+
+        loss = None
+        if labels is not None:
+            loss_fn = nn.CrossEntropyLoss()
+            loss = loss_fn(logits, labels)
+
+        return {"loss": loss, "logits": logits}
+
+    def generate_positional_encoding(self, dim, max_len):
+        pos_enc = torch.zeros(max_len, dim)
+        pos = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, dim, 2) * -(np.log(10000.0) / dim))
+        pos_enc[:, 0::2] = torch.sin(pos * div_term)
+        pos_enc[:, 1::2] = torch.cos(pos * div_term)
+        return pos_enc.unsqueeze(0)
+
+
+# Instantiate the model and configuration
+config = TransformerLMConfig(vocab_size=vocab_size, embedding_dim=64, hidden_dim=128, n_heads=8, num_layers=2)
+model = TransformerLM(config)
+
+# Training arguments
 training_args = TrainingArguments(
-    output_dir="./qlora_output",
-    per_device_train_batch_size=8,
-    per_device_eval_batch_size=8,
-    num_train_epochs=3,
-    logging_dir="./logs",
+    output_dir='./results',     # Output directory
+    num_train_epochs=100,       # Total number of training epochs
+    per_device_train_batch_size=2,  # Batch size per device
+    logging_dir='./logs',       # Directory for logs
     logging_steps=10,
-    save_steps=500,
-    evaluation_strategy="steps",
-    eval_steps=100,
-    save_total_limit=2,
-    fp16=True,  # Mixed precision for faster training,
-    optim='paged_adamw_8bit' # This reduces space (trust me)
+    no_cuda=True,
+    save_steps=1000,
+    save_total_limit=3
+
 )
 
-# Initialize Trainer with the LoRA model
+# Define Trainer
 trainer = Trainer(
-    model=lora_model,
-    args=training_args,
-    train_dataset=tokenized_dataset["train"],
-    eval_dataset=tokenized_dataset["validation"],
+    model=model,                 # The model to train
+    args=training_args,          # Training arguments
+    train_dataset=train_dataset, # Training dataset
 )
 
-# Fine-tune the model
+# Train the model
 trainer.train()
-
-
-# Save the fine-tuned model
-trainer.save_model("./fine_tuned_model")
-
-# Load for inference
-model = AutoModelForCausalLM.from_pretrained("./fine_tuned_model")
-
-
-end = time.time()
-print(f'{end-start:.2f} seconds taken')
