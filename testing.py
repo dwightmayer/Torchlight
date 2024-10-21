@@ -124,7 +124,7 @@ model = TransformerLM(config)
 # Training arguments
 training_args = TrainingArguments(
     output_dir='./results',     # Output directory
-    num_train_epochs=100,       # Total number of training epochs
+    num_train_epochs=1000,       # Total number of training epochs
     per_device_train_batch_size=2,  # Batch size per device
     logging_dir='./logs',       # Directory for logs
     logging_steps=10,
@@ -143,5 +143,5 @@ trainer = Trainer(
 
 # Train the model
 trainer.train()
-print(len(tokens))
+print(f'NUM TOKENS: {len(tokens)}')
 
