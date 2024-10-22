@@ -48,16 +48,15 @@ train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in train_d
 
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
-    def __init__(
-        self,
-        vocab_size=None,
-        embedding_dim=64,
-        hidden_dim=128,
-        n_heads=8,
-        num_layers=2,
-        sequence_length=5,
-        **kwargs
-    ):
+    def __init__(self,
+                 vocab_size=None,
+                 embedding_dim=64,
+                 hidden_dim=128,
+                 n_heads=8,
+                 num_layers=4,
+                 sequence_length=5,
+                 **kwargs):
+
         super().__init__(**kwargs)
         # Set defaults if not provided
         self.vocab_size = vocab_size if vocab_size is not None else 10000
@@ -69,7 +68,7 @@ class TransformerLMConfig(PretrainedConfig):
 
 
 # Define the Transformer Model using Hugging Face's PreTrainedModel
-class TransformerLM(PreTrainedModel):
+class TransformerDecoderLM(PreTrainedModel):
     config_class = TransformerLMConfig
 
     def __init__(self, config):
@@ -79,20 +78,34 @@ class TransformerLM(PreTrainedModel):
         self.embedding = nn.Embedding(config.vocab_size, config.embedding_dim)
 
         # Positional encoding
-        self.pos_encoding = self.generate_positional_encoding(config.embedding_dim, config.sequence_length)
+        self.register_buffer("pos_encoding",
+                             self.generate_positional_encoding(config.embedding_dim, config.sequence_length))
+
+        # self.pos_encoding = self.generate_positional_encoding(config.embedding_dim, config.sequence_length)
 
         # Transformer layers
-        transformer_layer = nn.TransformerEncoderLayer(d_model=config.embedding_dim,
-                                                       nhead=config.n_heads,
-                                                       dim_feedforward=config.hidden_dim)
-        self.transformer = nn.TransformerEncoder(transformer_layer, num_layers=config.num_layers)
+        decoder_transformer_layer = nn.TransformerDecoderLayer(d_model=config.embedding_dim,
+                                                               nhead=config.n_heads,
+                                                               dim_feedforward=config.hidden_dim,
+                                                               batch_first=True)
+
+        self.transformer = nn.TransformerDecoder(decoder_transformer_layer, num_layers=config.num_layers)
 
         # Final linear layer for word prediction
         self.fc = nn.Linear(config.embedding_dim, config.vocab_size)
 
     def forward(self, input_ids, labels=None):
+        batch_size = input_ids.size(0)
+        seq_len = input_ids.size(1)
+
         embeds = self.embedding(input_ids) + self.pos_encoding[:input_ids.size(1), :]
-        transformer_out = self.transformer(embeds)
+
+        # Create causal mask (upper triangular to prevent attending to future tokens)
+        tgt_mask = self.generate_square_subsequent_mask(input_ids.size(1))
+        #tgt_mask = tgt_mask.unsqueeze(0).expand(batch_size, -1, -1)
+
+        # Gets transformer outputs
+        transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
         logits = self.fc(transformer_out[:, -1, :])
 
         loss = None
@@ -112,26 +125,31 @@ class TransformerLM(PreTrainedModel):
         pos_enc[:, 1::2] = torch.cos(pos * div_term)
         return pos_enc.unsqueeze(0)
 
+    def generate_square_subsequent_mask(self, sz):
+        # Create an upper triangular matrix of -inf (for masking future positions)
+        return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
+
 
 # Instantiate the model and configuration. This restates the default arguments of the class. Problematic?
-config = TransformerLMConfig(vocab_size=vocab_size,
+old_config = TransformerLMConfig(vocab_size=vocab_size,
                              embedding_dim=64,
                              hidden_dim=128,
                              n_heads=8,
                              num_layers=2)
-model = TransformerLM(config)
+
+config = TransformerLMConfig()
+model = TransformerDecoderLM(config)
 
 # Training arguments
 training_args = TrainingArguments(
     output_dir='./results',     # Output directory
-    num_train_epochs=1000,       # Total number of training epochs
-    per_device_train_batch_size=2,  # Batch size per device
+    num_train_epochs=100,       # Total number of training epochs
+    per_device_train_batch_size=5,  # Batch size per device
     logging_dir='./logs',       # Directory for logs
     logging_steps=10,
-    no_cuda=True,
     save_steps=1000,
-    save_total_limit=3
-
+    save_total_limit=3,
+    use_cpu=True
 )
 
 # Define Trainer
@@ -143,5 +161,5 @@ trainer = Trainer(
 
 # Train the model
 trainer.train()
-print(f'NUM TOKENS: {len(tokens)}')
+print(f'VOCAB SIZE: {(vocab_size)}')
 
