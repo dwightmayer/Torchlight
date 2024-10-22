@@ -8,17 +8,36 @@ from transformers import Trainer, TrainingArguments
 from datasets import Dataset
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
+import regex as re
 import time
 
 # Sample data
 text = "Four score and seven years ago..."
 
-with open('sample_text.txt', 'r') as f:
+with open('training/moby-dick.txt', 'r') as f:
     text = f.read()
 
 
+def preprocess_text(text):
+    """Clean and tokenize text."""
+    # Convert to lowercase
+    text = text.lower()
+
+    # Replace multiple whitespace with single space
+    text = re.sub(r'\s+', ' ', text)
+
+    # Remove special characters but keep basic punctuation
+    text = re.sub(r'[^a-z0-9\s.,!?-]', '', text)
+
+    # Split into tokens
+    tokens = text.split()
+
+    return tokens
+
+
 # Tokenization and vocabulary creation
-tokens = text.lower().split()
+#tokens = text.lower().split()
+tokens = preprocess_text(text)
 vocab = sorted(set(tokens))
 vocab_size = len(vocab)
 
@@ -59,7 +78,7 @@ class TransformerLMConfig(PretrainedConfig):
 
         super().__init__(**kwargs)
         # Set defaults if not provided
-        self.vocab_size = vocab_size if vocab_size is not None else 10000
+        self.vocab_size = vocab_size if vocab_size is not None else 30000
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.n_heads = n_heads
@@ -144,7 +163,7 @@ model = TransformerDecoderLM(config)
 training_args = TrainingArguments(
     output_dir='./results',     # Output directory
     num_train_epochs=100,       # Total number of training epochs
-    per_device_train_batch_size=5,  # Batch size per device
+    per_device_train_batch_size=256,  # Batch size per device
     logging_dir='./logs',       # Directory for logs
     logging_steps=10,
     save_steps=1000,
