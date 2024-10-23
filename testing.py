@@ -5,11 +5,17 @@
 import torch
 from torch import nn
 from transformers import Trainer, TrainingArguments
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 import regex as re
 import time
+
+## Get data
+
+# 235MB subset of wikipedia, allegedly preprocessed try 2-5 epochs on whole set
+dataset = load_dataset("wikipedia", "20220301.simple")
+
 
 # Sample data
 text = "Four score and seven years ago..."
@@ -18,25 +24,19 @@ with open('training/moby-dick.txt', 'r') as f:
     text = f.read()
 
 
-def preprocess_text(text):
-    """Clean and tokenize text."""
-    # Convert to lowercase
-    text = text.lower()
-
-    # Replace multiple whitespace with single space
-    text = re.sub(r'\s+', ' ', text)
-
-    # Remove special characters but keep basic punctuation
-    text = re.sub(r'[^a-z0-9\s.,!?-]', '', text)
+def preprocess_text(txt):
+    """Clean and tokenize text. Nothing super special."""
+    # Convert to lowercase, remove whitespace nad special characters (excluding punctuation)
+    txt = txt.lower()
+    txt = re.sub(r'\s+', ' ', txt)
+    txt = re.sub(r'[^a-z0-9\s.,!?-]', '', txt)
 
     # Split into tokens
-    tokens = text.split()
-
-    return tokens
+    text_tokens = txt.split()
+    return text_tokens
 
 
 # Tokenization and vocabulary creation
-#tokens = text.lower().split()
 tokens = preprocess_text(text)
 vocab = sorted(set(tokens))
 vocab_size = len(vocab)
@@ -78,6 +78,8 @@ class TransformerLMConfig(PretrainedConfig):
 
         super().__init__(**kwargs)
         # Set defaults if not provided
+
+        # // Set to <100 and then run through small sample text to ensure system catches errors
         self.vocab_size = vocab_size if vocab_size is not None else 30000
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
@@ -113,17 +115,21 @@ class TransformerDecoderLM(PreTrainedModel):
 
     def forward(self, input_ids, labels=None):
 
-        # Checks for vocab size
+        # Checks for vocab size, I'd like to reset the config vocab size
         assert input_ids.max().item() < self.config.vocab_size, f"input_ids contain indices out of range: {input_ids.max().item()} >= {self.config.vocab_size}"
+        if self.config.vocab_size < input_ids.max().item():
+            # This resets the vocab size to match the input ids, this might explode something...
+            self.config.vocab_size = input_ids.max().item()
 
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
 
-        embeds = self.embedding(input_ids) + self.pos_encoding[:input_ids.size(1), :]
+        # embeds = self.embedding(input_ids) + self.pos_encoding[:input_ids.size(1), :]
+        embeds = self.embedding(input_ids) + self.pos_encoding[:seq_len, :]
 
         # Create causal mask (upper triangular to prevent attending to future tokens)
-        tgt_mask = self.generate_square_subsequent_mask(input_ids.size(1))
-        #tgt_mask = tgt_mask.unsqueeze(0).expand(batch_size, -1, -1)
+        # tgt_mask = self.generate_square_subsequent_mask(input_ids.size(1))
+        tgt_mask = self.generate_square_subsequent_mask(seq_len)
 
         # Gets transformer outputs
         transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
