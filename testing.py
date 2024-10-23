@@ -96,11 +96,9 @@ class TransformerDecoderLM(PreTrainedModel):
         # Embedding layer
         self.embedding = nn.Embedding(config.vocab_size, config.embedding_dim)
 
-        # Positional encoding
+        # Positional encoding (alternative)
         self.register_buffer("pos_encoding",
                              self.generate_positional_encoding(config.embedding_dim, config.sequence_length))
-
-        # self.pos_encoding = self.generate_positional_encoding(config.embedding_dim, config.sequence_length)
 
         # Transformer layers
         decoder_transformer_layer = nn.TransformerDecoderLayer(d_model=config.embedding_dim,
@@ -114,6 +112,10 @@ class TransformerDecoderLM(PreTrainedModel):
         self.fc = nn.Linear(config.embedding_dim, config.vocab_size)
 
     def forward(self, input_ids, labels=None):
+
+        # Checks for vocab size
+        assert input_ids.max().item() < self.config.vocab_size, f"input_ids contain indices out of range: {input_ids.max().item()} >= {self.config.vocab_size}"
+
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
 
@@ -168,7 +170,7 @@ training_args = TrainingArguments(
     logging_steps=10,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=True
+    use_cpu=True # CHANGE THIS WHEN CUDA IS AVAILABLE
 )
 
 # Define Trainer
