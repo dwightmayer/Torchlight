@@ -4,23 +4,51 @@
 
 import torch
 from torch import nn
-from transformers import Trainer, TrainingArguments
-from datasets import Dataset, load_dataset
+from transformers import Trainer, TrainingArguments, AutoTokenizer
+from datasets import Dataset, load_dataset, concatenate_datasets
+from torch.utils.data import DataLoader
+
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 import regex as re
+from itertools import islice
+
 import time
 
 ## Get data
 
-# 235MB subset of wikipedia, allegedly preprocessed try 2-5 epochs on whole set
-dataset = load_dataset("wikipedia", "20220301.simple")
+ds = load_dataset("wikipedia", "20220301.simple", split='train', trust_remote_code=True) # 235MB subset of wikipedia
 
+# ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', trust_remote_code=True) # 151 MB of  code (finetune)
+# ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia
+# ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text
+# ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related
+# ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct
 
-# Sample data
-text = "Four score and seven years ago..."
+# Concatenate datasets // hard to combine between formats
+dataset_cc = concatenate_datasets([ds])
 
-with open('training/moby-dick.txt', 'r') as f:
+tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+def tokenize_function(examples):
+    return tokenizer(examples['text'], padding='max_length', truncation=True)
+
+tokenized_datasets = dataset_cc.map(tokenize_function, batched=True)
+# tokenized_datasets = tokenized_datasets.remove_columns(["text"])
+# Tossing this column...
+# tokenized_datasets.set_format('torch', columns=['input_ids', 'attention_mask', 'labels'])
+#train_dataset = tokenized_datasets['train']
+
+dataloader = DataLoader(tokenized_datasets, batch_size=8, shuffle=True)
+
+subset_size = 10  # Define how many batches you want in your subset
+
+# Using islice to get only the first `subset_size` batches
+for i, batch in enumerate(islice(dataloader, subset_size)):
+    # Each `batch` is a dictionary of batched data (in this case the features and labels)
+    print(f"Batch {i+1}: {batch}")
+    # Add your training code here, e.g., model training step
+
+with open('training/sample_text.txt', 'r') as f:
     text = f.read()
 
 
@@ -35,7 +63,7 @@ def preprocess_text(txt):
     text_tokens = txt.split()
     return text_tokens
 
-
+# // put this into a main later???
 # Tokenization and vocabulary creation
 tokens = preprocess_text(text)
 vocab = sorted(set(tokens))
@@ -64,7 +92,7 @@ train_data = create_sequences(input_sequence, sequence_length)
 train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in train_data],
                                    'labels': [x['labels'] for x in train_data]})
 
-
+# train_dataset = dataset_cc
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
@@ -80,7 +108,7 @@ class TransformerLMConfig(PretrainedConfig):
         # Set defaults if not provided
 
         # // Set to <100 and then run through small sample text to ensure system catches errors
-        self.vocab_size = vocab_size if vocab_size is not None else 30000
+        self.vocab_size = vocab_size if vocab_size is not None else 488474
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.n_heads = n_heads
@@ -137,6 +165,8 @@ class TransformerDecoderLM(PreTrainedModel):
 
         loss = None
         if labels is not None:
+
+            # This is the loss function!!!!
             loss_fn = nn.CrossEntropyLoss()
             loss = loss_fn(logits, labels)
 
@@ -171,7 +201,7 @@ model = TransformerDecoderLM(config)
 training_args = TrainingArguments(
     output_dir='./results',     # Output directory
     num_train_epochs=100,       # Total number of training epochs
-    per_device_train_batch_size=256,  # Batch size per device
+    per_device_train_batch_size=16,  # Batch size per device // usually (256)
     logging_dir='./logs',       # Directory for logs
     logging_steps=10,
     save_steps=1000,
