@@ -14,7 +14,7 @@ import time
 
 ## Get data
 
-ds = load_dataset("wikipedia", "20220301.simple", split='train[:5%]', trust_remote_code=True) # 235MB subset of wikipedia
+ds = load_dataset("wikipedia", "20220301.simple", split='train', trust_remote_code=True) # 235MB subset of wikipedia
 print('dataset loaded')
 
 # ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', trust_remote_code=True) # 151 MB of  code (finetune)
@@ -37,29 +37,6 @@ print('tokenization mapped')
 print(tokenized_datasets[0].keys())
 # dataloader = DataLoader(tokenized_datasets, batch_size=8, shuffle=True)
 
-def preprocess_text(txt):
-    """Clean and tokenize text. Nothing super special."""
-    # Convert to lowercase, remove whitespace nad special characters (excluding punctuation)
-    txt = txt.lower()
-    txt = re.sub(r'\s+', ' ', txt)
-    txt = re.sub(r'[^a-z0-9\s.,!?-]', '', txt)
-
-    # Split into tokens
-    text_tokens = txt.split()
-    return text_tokens
-
-# Create sequences
-def create_sequences(input_sequence, sequence_length):
-    sequences = []
-    for i in range(len(input_sequence) - sequence_length):
-        seq = input_sequence[i:i + sequence_length]
-        target = input_sequence[i + sequence_length]
-        sequences.append({'input_ids': seq, 'labels': target})
-    return sequences
-
-
-# Prepare dataset
-
 print('creating train dataset...')
 train_dataset = (Dataset.from_dict({'input_ids': [x['input_ids'] for x in tokenized_datasets],
                                    'labels': [x['input_ids'] for x in tokenized_datasets]})) ### USED TO BE TITLE
@@ -80,7 +57,7 @@ class TransformerLMConfig(PretrainedConfig):
         # Set defaults if not provided
 
         # // Set to <100 and then run through small sample text to ensure system catches errors
-        self.vocab_size = vocab_size if vocab_size is not None else 488474
+        self.vocab_size = vocab_size if vocab_size is not None else tokenizer.vocab_size
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.n_heads = n_heads
