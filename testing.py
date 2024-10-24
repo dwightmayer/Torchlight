@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 import torch
 from torch import nn
@@ -31,16 +32,18 @@ tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 def tokenize_function(examples):
     return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=5, return_tensors='pt')
 
+
 print('Beginning tokenization:')
 tokenized_datasets = dataset_cc.map(tokenize_function, batched=True)
 print('tokenization mapped')
-print(tokenized_datasets[0].keys())
+
 # dataloader = DataLoader(tokenized_datasets, batch_size=8, shuffle=True)
 
 print('creating train dataset...')
 train_dataset = (Dataset.from_dict({'input_ids': [x['input_ids'] for x in tokenized_datasets],
                                    'labels': [x['input_ids'] for x in tokenized_datasets]})) ### USED TO BE TITLE
 print('training dataset object created')
+
 
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
@@ -154,7 +157,8 @@ training_args = TrainingArguments(
     logging_steps=10,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=True
+    use_cpu=False,
+    fp16=True
 )
 
 # Define Trainer
