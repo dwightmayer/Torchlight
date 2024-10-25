@@ -15,34 +15,35 @@ import time
 
 ## Get data
 
-ds = load_dataset("wikipedia", "20220301.simple", split='train', trust_remote_code=True) # 235MB subset of wikipedia
-print('dataset loaded')
+ds = load_dataset("wikipedia", "20220301.simple", split='train[:1%]', trust_remote_code=True) # 235MB subset of wikipedia
+print('Dataset loaded')
 
-# ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', trust_remote_code=True) # 151 MB of  code (finetune)
+ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
 # ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia
 # ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text
 # ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related
 # ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct
+# ds5 = load_dataset('bookcorpus', split='train') # ??? GB of text
+
+
 
 # Concatenate datasets // hard to combine between formats
-dataset_cc = concatenate_datasets([ds])
-print('datasets concatenated')
+dataset_cc = concatenate_datasets([ds, ds0])
+print('Datasets concatenated')
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 def tokenize_function(examples):
     return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=5, return_tensors='pt')
 
 
-print('Beginning tokenization:')
+print('Beginning tokenization')
 tokenized_datasets = dataset_cc.map(tokenize_function, batched=True)
-print('tokenization mapped')
+print('Tokenization mapped')
 
-# dataloader = DataLoader(tokenized_datasets, batch_size=8, shuffle=True)
-
-print('creating train dataset...')
-train_dataset = (Dataset.from_dict({'input_ids': [x['input_ids'] for x in tokenized_datasets],
-                                   'labels': [x['input_ids'] for x in tokenized_datasets]})) ### USED TO BE TITLE
-print('training dataset object created')
+print('Creating train dataset')
+train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in tokenized_datasets],
+                                  'labels': [x['input_ids'] for x in tokenized_datasets]})
+print('Training dataset created')
 
 
 # Model Config class for Hugging Face compatibility
@@ -75,10 +76,10 @@ class TransformerDecoderLM(PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        # Embedding layer
+        # Embedding layer // config defined where?
         self.embedding = nn.Embedding(config.vocab_size, config.embedding_dim)
 
-        # Positional encoding (alternative)
+        # Positional encoding (alternative) # saves when saved
         self.register_buffer("pos_encoding",
                              self.generate_positional_encoding(config.embedding_dim, config.sequence_length))
 
@@ -108,7 +109,6 @@ class TransformerDecoderLM(PreTrainedModel):
         embeds = self.embedding(input_ids) + self.pos_encoding[:seq_len, :]
 
         # Create causal mask (upper triangular to prevent attending to future tokens)
-        # tgt_mask = self.generate_square_subsequent_mask(input_ids.size(1))
         tgt_mask = self.generate_square_subsequent_mask(seq_len)
 
         # Gets transformer outputs
@@ -145,9 +145,6 @@ class TransformerDecoderLM(PreTrainedModel):
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
 
 
-config = TransformerLMConfig()
-model = TransformerDecoderLM(config)
-
 # Training arguments
 training_args = TrainingArguments(
     output_dir='./results',     # Output directory
@@ -157,9 +154,18 @@ training_args = TrainingArguments(
     logging_steps=10,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=False,
-    fp16=True
+    use_cpu=True,
+    fp16=False
 )
+
+# Loads up model and config
+config = TransformerLMConfig()
+model = TransformerDecoderLM(config)
+
+# Loads pretrained weights if desired
+load_model = False
+if load_model:
+    model.load_state_dict(torch.load('/model/moonshot_alt.pt'))
 
 # Define Trainer
 trainer = Trainer(
@@ -169,8 +175,18 @@ trainer = Trainer(
 )
 
 # Train the model
-print('beginning model training loop')
+print('Beginning model training loop')
 trainer.train()
 print(f'Vocab Size: {config.vocab_size}')
-print('model training loop complete :)')
+print('Model training loop complete')
 
+# Saves model if desired
+save_model = True
+if save_model:
+    torch.save(model.state_dict(), '/model/moonshot_alt.pt')
+    print('Model saved')
+
+# model save state dict
+# model load
+# function for next word prediction with saved
+#
