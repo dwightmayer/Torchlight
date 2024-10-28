@@ -8,27 +8,25 @@ from torch.utils.data import DataLoader
 
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
-import regex as re
-
-
-import time
+from pprint import pprint
 
 ## Get data
 
 ds = load_dataset("wikipedia", "20220301.simple", split='train[:1%]', trust_remote_code=True) # 235MB subset of wikipedia
 print('Dataset loaded')
 
-ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
-# ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia
-# ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text
-# ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related
-# ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct
+# ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
+# ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
+# ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text // IterableDatasetDict 100
+# ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related // IterableDatasetDict 1
+# ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct // Iterable Dataset Dict 2
 # ds5 = load_dataset('bookcorpus', split='train') # ??? GB of text
 
-
+#pprint(ds0[0])
+# print(ds5)
 
 # Concatenate datasets // hard to combine between formats
-dataset_cc = concatenate_datasets([ds, ds0])
+dataset_cc = concatenate_datasets([ds])
 print('Datasets concatenated')
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
@@ -91,16 +89,10 @@ class TransformerDecoderLM(PreTrainedModel):
 
         self.transformer = nn.TransformerDecoder(decoder_transformer_layer, num_layers=config.num_layers)
 
-        # Final linear layer for word prediction
+        # Final linear layer for word prediction.py
         self.fc = nn.Linear(config.embedding_dim, config.vocab_size)
 
     def forward(self, input_ids, labels=None):
-
-        # Checks for vocab size, I'd like to reset the config vocab size
-        assert input_ids.max().item() < self.config.vocab_size, f"input_ids contain indices out of range: {input_ids.max().item()} >= {self.config.vocab_size}"
-        if self.config.vocab_size < input_ids.max().item():
-            # This resets the vocab size to match the input ids, this might explode something...
-            self.config.vocab_size = input_ids.max().item()
 
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
@@ -158,35 +150,42 @@ training_args = TrainingArguments(
     fp16=False
 )
 
-# Loads up model and config
-config = TransformerLMConfig()
-model = TransformerDecoderLM(config)
 
-# Loads pretrained weights if desired
-load_model = False
-if load_model:
-    model.load_state_dict(torch.load('/model/moonshot_alt.pt'))
 
-# Define Trainer
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-)
 
-# Train the model
-print('Beginning model training loop')
-trainer.train()
-print(f'Vocab Size: {config.vocab_size}')
-print('Model training loop complete')
+def main():
 
-# Saves model if desired
-save_model = True
-if save_model:
-    torch.save(model.state_dict(), '/model/moonshot_alt.pt')
-    print('Model saved')
+    # Loads up model and config
+    config = TransformerLMConfig()
+    model = TransformerDecoderLM(config)
 
-# model save state dict
-# model load
-# function for next word prediction with saved
-#
+    # Loads pretrained weights if desired
+    load_model = False
+    if load_model:
+        model.load_state_dict(torch.load('moonshot_alt.pt'))
+
+    # Define Trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+    )
+    # Train the model
+    print('Beginning model training loop')
+    trainer.train()
+    print(f'Vocab Size: {config.vocab_size}')
+    print('Model training loop complete :)')
+
+    # Saves model
+    save_model = True
+    if save_model:
+        torch.save(model.state_dict(), 'moonshot_alt.pt')
+        print('Model saved')
+
+if __name__ == "__main__":
+    #main()
+    pass
+
+print(tokenize_function({'text': 'The quick brown fox'}))
+
+
