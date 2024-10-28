@@ -12,38 +12,20 @@ from pprint import pprint
 
 ## Get data
 
-ds = load_dataset("wikipedia", "20220301.simple", split='train', trust_remote_code=True) # 235MB subset of wikipedia
-print('Dataset loaded')
-
 # ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
 #ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
-#print('Dataset loaded')
-
 # ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text // IterableDatasetDict 100
 # ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related // IterableDatasetDict 1
 # ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct // Iterable Dataset Dict 2
 # ds5 = load_dataset('bookcorpus', split='train') # ??? GB of text
 
-#pprint(ds0[0])
-# print(ds5)
-
 # Concatenate datasets // hard to combine between formats
-dataset_cc = concatenate_datasets([ds])
-print('Datasets concatenated')
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+
 def tokenize_function(examples):
     return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=5, return_tensors='pt')
-
-
-print('Beginning tokenization')
-tokenized_datasets = dataset_cc.map(tokenize_function, batched=True)
-print('Tokenization mapped')
-
-print('Creating train dataset')
-train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in tokenized_datasets],
-                                  'labels': [x['input_ids'] for x in tokenized_datasets]})
-print('Training dataset created')
 
 
 # Model Config class for Hugging Face compatibility
@@ -154,6 +136,20 @@ training_args = TrainingArguments(
 
 
 def main():
+    ds = load_dataset("wikipedia", "20220301.simple", split='train',
+                      trust_remote_code=True)  # 235MB subset of wikipedia
+    print('Dataset loaded')
+
+    dataset_cc = concatenate_datasets([ds])
+    print('Datasets concatenated')
+
+    print('Beginning tokenization')
+    tokenized_datasets = dataset_cc.map(tokenize_function, batched=True)
+
+    print('Creating train dataset')
+    train_dataset = Dataset.from_dict({'input_ids': [x['input_ids'] for x in tokenized_datasets],
+                                       'labels': [x['input_ids'] for x in tokenized_datasets]})
+    print('Training dataset created')
 
     # Loads up model and config
     config = TransformerLMConfig()
@@ -172,7 +168,7 @@ def main():
     )
     # Train the model
     print('Beginning model training loop')
-    trainer.train()
+    # trainer.train()
     print(f'Vocab Size: {config.vocab_size}')
     print('Model training loop complete :)')
 
@@ -182,9 +178,9 @@ def main():
         torch.save(model.state_dict(), 'moonshot_alt.pt')
         print('Model saved')
 
-
 if __name__ == "__main__":
     main()
+
 
 
 

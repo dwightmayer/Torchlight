@@ -38,16 +38,13 @@ def generate_next_tokens(
 
             # Gets outputs, and logits of last output
             outputs = model(input_ids, attention_mask)['logits']
-            last_token_logits = outputs[-1]
+            last_token_logits = outputs[-1, :]
 
             # normalizes inputs. // Can call argmax directly if you want
             next_token_probs = torch.softmax(last_token_logits, dim=-1) # changeed from 0
+            next_token = torch.argmax(next_token_probs)# trying on argmin. think [SEP] dominates?
 
-
-            next_token = torch.argmin(next_token_probs)# trying on argmin. think [SEP] dominates?
             # trying for a more varied sample.
-            #next_token = torch.multinomial(next_token_probs, num_samples=1)
-
             generated.append(next_token.item())
 
             # Gets input ids and updates attention mask
@@ -59,8 +56,23 @@ def generate_next_tokens(
                 input_ids = input_ids[:, -model.config.sequence_length:]
                 attention_mask = attention_mask[:, -model.config.sequence_length:]
 
+            k = 10
+            top_probs, top_indices = torch.topk(last_token_logits, k)
+
+            # Extract the top logits and corresponding tokens
+            first_largest_logit = top_probs[0].item()
+            second_largest_logit = top_probs[1].item() if k > 1 else None
+
+            # Print the largest and second largest logits with their tokens
+            first_token_string = tokenizer.convert_ids_to_tokens(top_indices[0].item())
+            second_token_string = tokenizer.convert_ids_to_tokens(
+                top_indices[1].item()) if second_largest_logit is not None else "N/A"
+
+            print(first_largest_logit, first_token_string)
+            print(second_largest_logit, second_token_string)
+
     # when skip=True, I get '' as my pred, skip=False gets me [SEP] x5 // unsure why.
-    generated_tokens = tokenizer.decode(generated, skip_special_tokens=False)
+    generated_tokens = tokenizer.decode(generated, skip_special_tokens=True)
     print(generated_tokens)
     sep_token_id = tokenizer.convert_tokens_to_ids('[SEP]')
     print("Logit for [SEP]:", last_token_logits[sep_token_id].item())
@@ -70,7 +82,8 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "The weather today is"
+    input_text = "The weather today is "
+    input_text = "The largest known is "
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     print(f"Predicted next word: THE WEATHER TODAY IS: //  {predicted_word}")
 
