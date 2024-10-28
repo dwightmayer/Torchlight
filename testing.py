@@ -12,11 +12,13 @@ from pprint import pprint
 
 ## Get data
 
-ds = load_dataset("wikipedia", "20220301.simple", split='train[:1%]', trust_remote_code=True) # 235MB subset of wikipedia
+ds = load_dataset("wikipedia", "20220301.simple", split='train', trust_remote_code=True) # 235MB subset of wikipedia
 print('Dataset loaded')
 
 # ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
-# ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
+#ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
+#print('Dataset loaded')
+
 # ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text // IterableDatasetDict 100
 # ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related // IterableDatasetDict 1
 # ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct // Iterable Dataset Dict 2
@@ -146,11 +148,9 @@ training_args = TrainingArguments(
     logging_steps=10,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=True,
-    fp16=False
+    use_cpu=False,
+    fp16=True
 )
-
-
 
 
 def main():
@@ -182,10 +182,9 @@ def main():
         torch.save(model.state_dict(), 'moonshot_alt.pt')
         print('Model saved')
 
-if __name__ == "__main__":
-    #main()
-    pass
 
-print(tokenize_function({'text': 'The quick brown fox'}))
+if __name__ == "__main__":
+    main()
+
 
 

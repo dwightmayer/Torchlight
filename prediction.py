@@ -72,7 +72,7 @@ def main():
     # Example usage
     input_text = "The weather today is"
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
-    print(f"Predicted next word: {predicted_word}")
+    print(f"Predicted next word: THE WEATHER TODAY IS: //  {predicted_word}")
 
 
 if __name__ == "__main__":
