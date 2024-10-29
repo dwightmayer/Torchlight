@@ -12,14 +12,34 @@ from pprint import pprint
 
 ## Get data
 
-# ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
-#ds1 = load_dataset("wikipedia", "20220301.en", streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
-# ds2 = load_dataset("pythera/english-mlmcorpus", streaming=True) # 58GB of plain text // IterableDatasetDict 100
-# ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", streaming=True) # 2.5GB of code related // IterableDatasetDict 1
+ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
+# ds1 = load_dataset("wikipedia", "20220301.en", split='train', streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
+# ds2 = load_dataset("pythera/english-mlmcorpus", split='train', streaming=True) # 58GB of plain text // IterableDatasetDict 100
+# ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", split='train', streaming=True) # 2.5GB of code related // IterableDatasetDict 1
 # ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct // Iterable Dataset Dict 2
-# ds5 = load_dataset('bookcorpus', split='train') # ??? GB of text
+# ds5 = load_dataset('bookcorpus', split='train', streaming=True, trust_remote_code=True) # ??? GB of text
 
+
+dataset = ds0
 # Concatenate datasets // hard to combine between formats
+for i, example in enumerate(dataset):
+    if i < 3:
+        # print(i, example)
+        ex = example
+    else:
+        break
+
+pprint(ex)
+print(type(dataset))
+print(dataset)
+print(ex.keys())
+#print(ex['question'])
+#print(ex['expected_answer'])
+
+#pprint(ex['conversations'])
+
+
+
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
@@ -179,7 +199,8 @@ def main():
         print('Model saved')
 
 if __name__ == "__main__":
-    main()
+    # main()
+    pass
 
 
 

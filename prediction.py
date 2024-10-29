@@ -18,7 +18,7 @@ def generate_next_tokens(
         model: nn.Module,
         text: str,
         tokenizer,
-        max_new_tokens: int = 5,
+        max_new_tokens: int = 1,
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu') -> str:
 
     model.eval()
@@ -83,7 +83,7 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "You will learn respect and suffering will"
+    input_text = "The weather today is"
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     print(f"Predicted next word: //  {predicted_word}")
 

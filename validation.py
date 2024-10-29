@@ -5,6 +5,7 @@ from transformers import AutoTokenizer
 from testing import TransformerDecoderLM, TransformerLMConfig
 
 from torch.utils.data import DataLoader
+import evaluate
 
 
 # Load a pretrained tokenizer or the one you used for training
@@ -59,3 +60,11 @@ average_perplexity = torch.exp(torch.tensor(average_loss))
 
 print(f"\nAverage Loss: {average_loss:.4f}")
 print(f"Average Perplexity: {average_perplexity.item():.4f}")
+
+evaluation_dataset = None
+metric = None
+for model_inputs, gold_standards in evaluation_dataset:
+    predictions = model(model_inputs)
+    metric.add_batch(references=gold_standards, predictions=predictions)
+metric.compute()
+
