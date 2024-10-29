@@ -156,6 +156,7 @@ def main():
 
     batch = next(iter(dl))
     dataset_cc = Dataset.from_dict(batch)
+    print(dataset_cc.info['size_in_bytes'])
     print('Batched Dataset Loaded')
 
     print('Beginning tokenization')
