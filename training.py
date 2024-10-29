@@ -5,11 +5,10 @@ from torch import nn
 from transformers import Trainer, TrainingArguments, AutoTokenizer
 from datasets import Dataset, load_dataset, concatenate_datasets
 from torch.utils.data import DataLoader
-
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 from pprint import pprint
-from time import time
+import time
 
 # Get data
 
