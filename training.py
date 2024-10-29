@@ -32,7 +32,7 @@ dataset = dataset_meow
 
 
 # DataLoader wants there to only be a text column! Or at least common all columns...
-dl = DataLoader(dataset, batch_size=10000, shuffle=False)
+dl = DataLoader(dataset, batch_size=100_000, shuffle=False)
 print('Dataloader created')
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
