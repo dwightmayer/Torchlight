@@ -70,6 +70,7 @@ def generate_next_tokens(
 
             print(first_largest_logit, first_token_string)
             print(second_largest_logit, second_token_string)
+            print()
 
     # when skip=True, I get '' as my pred, skip=False gets me [SEP] x5 // unsure why.
     generated_tokens = tokenizer.decode(generated, skip_special_tokens=True)
@@ -82,10 +83,9 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "The weather today is "
-    input_text = "The largest known is "
+    input_text = "You will learn respect and suffering will"
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
-    print(f"Predicted next word: THE WEATHER TODAY IS: //  {predicted_word}")
+    print(f"Predicted next word: //  {predicted_word}")
 
 
 if __name__ == "__main__":
