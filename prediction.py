@@ -83,7 +83,7 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "The weather today is"
+    input_text = "The political rallies evolved into"
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     print(f"Predicted next word: //  {predicted_word}")
 
