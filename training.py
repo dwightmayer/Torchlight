@@ -29,15 +29,6 @@ for i, example in enumerate(dataset):
     else:
         break
 
-pprint(ex)
-print(type(dataset))
-print(dataset)
-print(ex.keys())
-#print(ex['question'])
-#print(ex['expected_answer'])
-
-#pprint(ex['conversations'])
-
 
 
 
@@ -109,8 +100,7 @@ class TransformerDecoderLM(PreTrainedModel):
 
         # Gets transformer outputs
         transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
-        # logits = self.fc(transformer_out[:, -1, :]) # Predicts the last token nin the sequence...
-        logits = self.fc(transformer_out)  # Predicts for all tokens in the sequence
+        logits = self.fc(transformer_out) # Predicts the last token nin the sequence...
 
         loss = None
         if labels is not None:
@@ -119,8 +109,12 @@ class TransformerDecoderLM(PreTrainedModel):
             logits = logits.view(-1, self.config.vocab_size)
             labels = labels.view(-1)
 
+            # Shift labels left by 1 and mark last positions as ignored
+            labels = torch.roll(labels, shifts=-1)
+            labels[::seq_len] = -100  # Mark last position of each sequence as ignored
+
             # This is the loss function!!!!
-            loss_fn = nn.CrossEntropyLoss()
+            loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fn(logits, labels)
 
         return {"loss": loss, "logits": logits}

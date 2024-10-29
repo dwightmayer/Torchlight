@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from transformers import AutoTokenizer
-from testing import TransformerDecoderLM, TransformerLMConfig
+from training import TransformerDecoderLM, TransformerLMConfig
 
 # Load a pretrained tokenizer or the one you used for training
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')

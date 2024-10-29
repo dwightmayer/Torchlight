@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn
 
 from transformers import AutoTokenizer
-from testing import TransformerDecoderLM, TransformerLMConfig
+from training import TransformerDecoderLM, TransformerLMConfig
 
 from torch.utils.data import DataLoader
+from datasets import Dataset, load_dataset, concatenate_datasets
+
 import evaluate
 
 
@@ -60,6 +62,9 @@ average_perplexity = torch.exp(torch.tensor(average_loss))
 
 print(f"\nAverage Loss: {average_loss:.4f}")
 print(f"Average Perplexity: {average_perplexity.item():.4f}")
+
+ds = load_dataset("bookcorpus", trust_remote_code=True)
+validation_set = ds['train'][0:100]
 
 evaluation_dataset = None
 metric = None
