@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 from pprint import pprint
+from time import time
 
 # Get data
 
@@ -184,7 +185,11 @@ def main():
     )
     # Train the model
     print('Beginning model training loop')
+    start = time.time()
     trainer.train()
+    end = time.time()
+    print(f'Hours: {(end-start)/3600}')
+
     print(f'Vocab Size: {config.vocab_size}')
     print('Model training loop complete :)')
 
