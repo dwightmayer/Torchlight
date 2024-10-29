@@ -12,25 +12,42 @@ from pprint import pprint
 
 ## Get data
 
-ds0 = load_dataset("openbmb/UltraInteract_sft", split='train[:1%]', trust_remote_code=True) # 151 MB of  code (finetune)
-# ds1 = load_dataset("wikipedia", "20220301.en", split='train', streaming=True) # 21GB of English Wikipedia // IterableDatasetDict 42
-# ds2 = load_dataset("pythera/english-mlmcorpus", split='train', streaming=True) # 58GB of plain text // IterableDatasetDict 100
-# ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", split='train', streaming=True) # 2.5GB of code related // IterableDatasetDict 1
-# ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True) # 2.7GB of Math instruct // Iterable Dataset Dict 2
-# ds5 = load_dataset('bookcorpus', split='train', streaming=True, trust_remote_code=True) # ??? GB of text
+ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', streaming=True, trust_remote_code=True) # 151 MB of  code (finetune)
+ds1 = load_dataset("wikipedia", "20220301.en", split='train', streaming=True, trust_remote_code=True) # 21GB of English Wikipedia // IterableDatasetDict 42
+ds2 = load_dataset("pythera/english-mlmcorpus", split='train', streaming=True, trust_remote_code=True) # 58GB of plain text // IterableDatasetDict 100
+ds3 = load_dataset("H-D-T/Buzz-slice-1-10-V1.2", split='train', streaming=True, trust_remote_code=True) # 2.5GB of code related // IterableDatasetDict 1
+ds4 = load_dataset("nvidia/OpenMathInstruct-1", streaming=True, trust_remote_code=True) # 2.7GB of Math instruct // Iterable Dataset Dict 2
+ds5 = load_dataset('bookcorpus', split='train', streaming=True, trust_remote_code=True) # ??? GB of text
 
+#
 
-dataset = ds0
+# It is possible to rename columns for better text combination...
+ds1 = ds1.remove_columns(['id', 'url', 'title'])
+
+datasets = [ds1, ds2, ds5]
+
+# print(ds0.features)
+# print(ds3.features)
+# print(ds4.features)
+
+# This combines to one iterable dataset... promising for loader...
+dataset_meow = concatenate_datasets(datasets)
+dataset = dataset_meow
 # Concatenate datasets // hard to combine between formats
-for i, example in enumerate(dataset):
+
+
+# DataLoader wants there to only be a text column! Or at least common all columns...
+dl = DataLoader(dataset, batch_size=10000, shuffle=False)
+"""
+for i, batch in enumerate(dl):
     if i < 3:
-        # print(i, example)
-        ex = example
+        print(type(batch))
+        # converts batch to type dataset
+        batch = Dataset.from_dict(batch).with_format('torch')
+        print(type(batch))
     else:
         break
-
-
-
+"""
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
@@ -144,18 +161,19 @@ training_args = TrainingArguments(
     logging_steps=10,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=False,
-    fp16=True
+    use_cpu=True,
+    fp16=False
 )
 
 
 def main():
-    ds = load_dataset("wikipedia", "20220301.simple", split='train',
+    ds = load_dataset("wikipedia", "20220301.simple", split='train[:1%]',
                       trust_remote_code=True)  # 235MB subset of wikipedia
     print('Dataset loaded')
 
-    dataset_cc = concatenate_datasets([ds])
-    print('Datasets concatenated')
+    batch = next(iter(dl))
+    dataset_cc = Dataset.from_dict(batch)
+    print('Batched Dataset Loaded')
 
     print('Beginning tokenization')
     tokenized_datasets = dataset_cc.map(tokenize_function, batched=True)
@@ -182,7 +200,7 @@ def main():
     )
     # Train the model
     print('Beginning model training loop')
-    # trainer.train()
+    trainer.train()
     print(f'Vocab Size: {config.vocab_size}')
     print('Model training loop complete :)')
 
@@ -193,8 +211,7 @@ def main():
         print('Model saved')
 
 if __name__ == "__main__":
-    # main()
-    pass
+    main()
 
 
 

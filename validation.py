@@ -64,12 +64,13 @@ print(f"\nAverage Loss: {average_loss:.4f}")
 print(f"Average Perplexity: {average_perplexity.item():.4f}")
 
 ds = load_dataset("bookcorpus", trust_remote_code=True)
-validation_set = ds['train'][0:100]
+evaluation_dataset = ds['train'][0:100]
+evaluation_dataset.keys()
 
-evaluation_dataset = None
-metric = None
+
+metric = evaluate.load('perplexity')
 for model_inputs, gold_standards in evaluation_dataset:
     predictions = model(model_inputs)
     metric.add_batch(references=gold_standards, predictions=predictions)
-metric.compute()
+print(metric.compute())
 
