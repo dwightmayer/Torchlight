@@ -10,9 +10,12 @@ tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 # Instantiate the model and load the weights from previous scripts
 config = TransformerLMConfig()
 model = TransformerDecoderLM(config)
-model.load_state_dict(torch.load('moonshot_alt.pt'))
+device = torch.device("cpu")
+model.load_state_dict(torch.load('moonshot_alt.pt', map_location=device))
 model.eval()
 
+#device = torch.device("cpu")
+#model.to(device)
 
 def generate_next_tokens(
         model: nn.Module,
@@ -83,7 +86,7 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "The political rallies evolved into"
+    input_text = "Cooking food means "
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     print(f"Predicted next word: //  {predicted_word}")
 

@@ -10,6 +10,10 @@ import numpy as np
 from pprint import pprint
 import time
 
+device = torch.device("cpu")
+
+
+
 # Get data
 
 ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', streaming=True, trust_remote_code=True) # 151 MB of  code (finetune)
@@ -144,7 +148,7 @@ training_args = TrainingArguments(
     num_train_epochs=100,       # Total number of training epochs
     per_device_train_batch_size=16,  # Batch size per device // usually (256)
     logging_dir='./logs',       # Directory for logs
-    logging_steps=1000,
+    logging_steps=10000,
     save_steps=1000,
     save_total_limit=3,
     use_cpu=False,
@@ -154,7 +158,10 @@ training_args = TrainingArguments(
 
 def main():
 
-    batch = next(iter(dl))
+    # This gets the second batch
+    data_iterator = iter(dl)
+    batch = next(data_iterator)
+    batch = next(data_iterator)
     dataset_cc = Dataset.from_dict(batch)
     # print(dataset_cc.info['size_in_bytes'])
     print('Batched Dataset Loaded')
@@ -172,7 +179,7 @@ def main():
     model = TransformerDecoderLM(config)
 
     # Loads pretrained weights if desired
-    load_model = False
+    load_model = True
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
