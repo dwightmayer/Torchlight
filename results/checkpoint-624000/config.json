@@ -1,0 +1,13 @@
+{
+  "architectures": [
+    "TransformerDecoderLM"
+  ],
+  "embedding_dim": 64,
+  "hidden_dim": 128,
+  "n_heads": 8,
+  "num_layers": 4,
+  "sequence_length": 5,
+  "torch_dtype": "float32",
+  "transformers_version": "4.45.2",
+  "vocab_size": 30522
+}
