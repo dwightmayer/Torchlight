@@ -65,15 +65,20 @@ def generate_next_tokens(
             # Extract the top logits and corresponding tokens
             first_largest_logit = top_probs[0].item()
             second_largest_logit = top_probs[1].item() if k > 1 else None
+            third_largest_logit = top_probs[2].item() if k > 2 else None
+
 
             # Print the largest and second largest logits with their tokens
             first_token_string = tokenizer.convert_ids_to_tokens(top_indices[0].item())
             second_token_string = tokenizer.convert_ids_to_tokens(
                 top_indices[1].item()) if second_largest_logit is not None else "N/A"
+            third_logit_string = tokenizer.convert_ids_to_tokens(
+                top_indices[2].item()) if third_largest_logit is not None else "N/A"
+
 
             print(first_largest_logit, first_token_string)
             print(second_largest_logit, second_token_string)
-            print()
+            print(third_largest_logit, third_logit_string)
 
     # when skip=True, I get '' as my pred, skip=False gets me [SEP] x5 // unsure why.
     generated_tokens = tokenizer.decode(generated, skip_special_tokens=True)
@@ -86,10 +91,10 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "Cooking food means "
+    input_text = "Depending on how fast I drink my"
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     print(f"Predicted next word: //  {predicted_word}")
-
+    # getting lots of PAD characters
 
 if __name__ == "__main__":
     main()

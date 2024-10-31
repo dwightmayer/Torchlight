@@ -10,10 +10,6 @@ import numpy as np
 from pprint import pprint
 import time
 
-device = torch.device("cpu")
-
-
-
 # Get data
 
 ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', streaming=True, trust_remote_code=True) # 151 MB of  code (finetune)
@@ -25,18 +21,11 @@ ds5 = load_dataset('bookcorpus', split='train', streaming=True, trust_remote_cod
 
 # It is possible to rename columns for better text combination...
 ds1 = ds1.remove_columns(['id', 'url', 'title'])
-
-# data with text column...
 datasets = [ds1, ds2, ds5]
+dataset = concatenate_datasets(datasets)
 
-# This combines to one iterable dataset... promising for loader...
-dataset_meow = concatenate_datasets(datasets)
-dataset = dataset_meow
-# Concatenate datasets // hard to combine between formats
-
-
-# DataLoader wants there to only be a text column! Or at least common all columns...
-dl = DataLoader(dataset, batch_size=100_000, shuffle=False)
+# Creates Dataloader using only text column
+dl = DataLoader(dataset, batch_size=100_000, shuffle=None, batch_sampler=None, sampler=None)
 print('Dataloader created')
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
@@ -126,7 +115,6 @@ class TransformerDecoderLM(PreTrainedModel):
 
         return {"loss": loss, "logits": logits}
 
-    # This should not be a static method. PyCharm is mistaken imo.
     def generate_positional_encoding(self, dim, max_len):
         # This gets the positional encoding
         pos_enc = torch.zeros(max_len, dim)
@@ -136,6 +124,7 @@ class TransformerDecoderLM(PreTrainedModel):
         pos_enc[:, 0::2] = torch.sin(pos * div_term)
         pos_enc[:, 1::2] = torch.cos(pos * div_term)
         return pos_enc.unsqueeze(0)
+
 
     def generate_square_subsequent_mask(self, sz):
         # Create an upper triangular matrix of -inf (for masking future positions)
@@ -151,19 +140,19 @@ training_args = TrainingArguments(
     logging_steps=10000,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=False,
-    fp16=True
+    use_cpu=True,
+    fp16=False
 )
 
 
 def main():
 
-    # This gets the second batch
+    # This gets the nth batch
     data_iterator = iter(dl)
     batch = next(data_iterator)
     batch = next(data_iterator)
+    batch = next(data_iterator)
     dataset_cc = Dataset.from_dict(batch)
-    # print(dataset_cc.info['size_in_bytes'])
     print('Batched Dataset Loaded')
 
     print('Beginning tokenization')
@@ -183,6 +172,8 @@ def main():
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
+
+
     # Define Trainer
     trainer = Trainer(
         model=model,
@@ -192,7 +183,7 @@ def main():
     # Train the model
     print('Beginning model training loop')
     start = time.time()
-    trainer.train()
+    # trainer.train()
     end = time.time()
     print(f'Hours: {(end-start)/3600}')
 
@@ -204,6 +195,14 @@ def main():
     if save_model:
         torch.save(model.state_dict(), 'moonshot_alt.pt')
         print('Model saved')
+
+
+    #i = 0
+    #for i, dc in enumerate(dl):
+        #i += 1
+        #if i % 1000 == 0:
+            #print(f'{i}th Batch Iterated')
+
 
 
 if __name__ == "__main__":
