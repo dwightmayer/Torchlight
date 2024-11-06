@@ -177,6 +177,9 @@ def main():
         model.load_state_dict(torch.load('moonshot_alt.pt'))
         print(f'Model training loop iteration complete')
 
+        if i == 2:
+            break
+
 
 if __name__ == "__main__":
     main()
