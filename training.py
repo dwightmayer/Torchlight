@@ -39,10 +39,10 @@ def tokenize_function(examples):
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
                  vocab_size=tokenizer.vocab_size,
-                 embedding_dim=128, # old 64?
+                 embedding_dim=256, # increasing embedding dimension rq
                  hidden_dim=128,
                  n_heads=16,
-                 num_layers=16, # old 4
+                 num_layers=16,
                  sequence_length=5,
                  **kwargs):
 
