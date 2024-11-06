@@ -74,17 +74,7 @@ class TransformerDecoderLM(PreTrainedModel):
                              self.generate_positional_encoding(config.embedding_dim, config.sequence_length))
 
         # Transformer layers
-        decoder_transformer_layer = nn.TransformerDecoderLayer(d_model=config.embedding_dim,
-                                                               nhead=config.n_heads,
-                                                               dim_feedforward=config.hidden_dim,
-                                                               batch_first=True)
-        self.transformer = nn.TransformerDecoder(decoder_transformer_layer, num_layers=config.num_layers)
-
-        # Final linear layer for word prediction.py
-        self.fc = nn.Linear(config.embedding_dim, config.vocab_size)
-
-    def forward(self, input_ids, labels=None):
-
+        decoder_transformer_layer = nn.TransformerDecoderLayer(d_model=config.embedding_dim)
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
 
@@ -177,10 +167,6 @@ def main():
         model.load_state_dict(torch.load('moonshot_alt.pt'))
         print(f'Model training loop iteration complete')
 
-	if i==2:
-		breakk
-		
 
 if __name__ == "__main__":
-    main()
-
+    main(
