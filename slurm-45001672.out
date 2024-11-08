@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/var/spool/slurmd/job45001672/slurm_script", line 5, in <module>
-    from transformers import Trainer, TrainingArguments, AutoTokenizer
-ModuleNotFoundError: No module named 'transformers'
