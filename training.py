@@ -23,8 +23,8 @@ ds1 = ds1.remove_columns(['id', 'url', 'title'])
 datasets = [ds1, ds2, ds5]
 dataset = concatenate_datasets(datasets)
 
-# Creates Dataloader using only text column
-dl = DataLoader(dataset, batch_size=10_000, shuffle=None, batch_sampler=None, sampler=None)
+# Creates Dataloader using only text column /// ITERABLE
+dl = DataLoader(dataset, batch_size=100_000, shuffle=None, batch_sampler=None, sampler=None)
 print('Dataloader created')
 
 
@@ -155,12 +155,25 @@ def main():
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
+    try:
+        with open("number.txt", "r") as file:
+            stored_train_index = int(file.read())
+    except FileNotFoundError:
+        print("Error: The file was not found.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
     # This automatically batches + records batch index
     for i, ex in enumerate(dl):
         print(f'{i}th Loop')
 
+        if i != stored_train_index:
+            continue
+
         batch_data = Dataset.from_dict(ex)
         tokenized_datasets = batch_data.map(tokenize_function, batched=True)
+
+        # shuffle the phone number vs. take a random number
         train_dataset = Dataset.from_dict(
             {'input_ids': [x['input_ids'] for x in tokenized_datasets],
              'labels': [x['input_ids'] for x in tokenized_datasets]})
@@ -177,8 +190,10 @@ def main():
         model.load_state_dict(torch.load('moonshot_alt.pt'))
         print(f'Model training loop iteration complete')
 
-        if i == 2:
-            break
+        # Writes number to file for completed batch
+        with open("number.txt", "w") as file:
+            file.write(str(i))
+            file.close()
 
 
 if __name__ == "__main__":
