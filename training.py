@@ -137,7 +137,7 @@ training_args = TrainingArguments(
     num_train_epochs=100,       # Total number of training epochs
     per_device_train_batch_size=16,  # Batch size per device // usually (256)
     logging_dir='./logs',       # Directory for logs
-    logging_steps=10000,
+    logging_steps=100000,
     save_steps=1000,
     save_total_limit=3,
     use_cpu=False,
@@ -155,6 +155,7 @@ def main():
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
+    stored_train_index = 0
     try:
         with open("number.txt", "r") as file:
             stored_train_index = int(file.read())
@@ -167,6 +168,7 @@ def main():
     for i, ex in enumerate(dl):
         print(f'{i}th Loop')
 
+        # This prevents retraining on the same batch index. Scales poorly I fear...
         if i != stored_train_index:
             continue
 
