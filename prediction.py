@@ -86,6 +86,7 @@ def main():
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     # print(f"Predicted next word: //  {predicted_word}")
     # getting lots of PAD characters
+    model.estimate_parameters()
 
 
 if __name__ == "__main__":

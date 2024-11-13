@@ -129,6 +129,18 @@ class TransformerDecoderLM(PreTrainedModel):
         # Create an upper triangular matrix of -inf (for masking future positions)
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
 
+    def estimate_parameters(self):
+        # Gets estimated parameter count of the model
+        d_model = self.config.embedding_dim
+        nlayers = self.config.num_layers
+        vocab_size = self.config.vocab_size
+        ex1 = 12 * d_model**2 * nlayers + 8 * d_model * self.config.hidden_dim * nlayers
+        ex2 = (vocab_size * d_model) + (16 * d_model**2) * nlayers
+
+        print(f'This model has {ex1/1e6:.2f}M parameters')
+        print(f'This model has {ex2/1e6:.2f}M parameters')
+        return None
+
 
 # Training arguments
 training_args = TrainingArguments(
@@ -198,5 +210,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    pass
 
