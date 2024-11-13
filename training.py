@@ -44,6 +44,10 @@ class TransformerLMConfig(PretrainedConfig):
                  n_heads=16,
                  num_layers=16,
                  sequence_length=5,
+
+                 # This inputs dropout probability to encourage robust behavior
+                 hidden_dropout_prob = 0.2,
+                 attention_probs_dropout_prob = 0.2,
                  **kwargs):
 
         super().__init__(**kwargs)
