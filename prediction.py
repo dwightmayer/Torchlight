@@ -82,7 +82,7 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "four score and seven years ago this nation "
+    input_text = "I like eating "
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     # print(f"Predicted next word: //  {predicted_word}")
     # getting lots of PAD characters
