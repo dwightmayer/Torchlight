@@ -271,3 +271,8 @@ zeromq=4.3.5=hcec6c5f_0
 zipp=3.17.0=py311hecd8cb5_0
 zlib=1.2.13=h4b97444_1
 zstd=1.5.5=hc035e20_2
+
+numpy~=1.26.4
+transformers~=4.41.2
+datasets~=2.19.1
+evaluate~=0.4.3

@@ -125,7 +125,6 @@ class TransformerDecoderLM(PreTrainedModel):
         pos_enc[:, 1::2] = torch.cos(pos * div_term)
         return pos_enc.unsqueeze(0)
 
-
     def generate_square_subsequent_mask(self, sz):
         # Create an upper triangular matrix of -inf (for masking future positions)
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)

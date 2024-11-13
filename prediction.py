@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-
 from transformers import AutoTokenizer
 from training import TransformerDecoderLM, TransformerLMConfig
 
@@ -13,9 +12,6 @@ model = TransformerDecoderLM(config)
 device = torch.device("cpu")
 model.load_state_dict(torch.load('moonshot_alt.pt', map_location=device))
 model.eval()
-
-# device = torch.device("cpu")
-# model.to(device)
 
 
 def generate_next_tokens(
@@ -75,24 +71,20 @@ def generate_next_tokens(
             third_logit_string = tokenizer.convert_ids_to_tokens(
                 top_indices[2].item()) if third_largest_logit is not None else "N/A"
 
-            print(first_largest_logit, first_token_string)
-            print(second_largest_logit, second_token_string)
-            print(third_largest_logit, third_logit_string)
+            print(round(first_largest_logit, 2), first_token_string)
+            print(round(second_largest_logit, 2), second_token_string)
+            print(round(third_largest_logit, 2), third_logit_string)
 
     # when skip=True, I get '' as my prediction, skip=False gets me [SEP] x5 // unsure why.
     generated_tokens = tokenizer.decode(generated, skip_special_tokens=True)
-    print(generated_tokens)
-    sep_token_id = tokenizer.convert_tokens_to_ids('[SEP]')
-    print("Logit for [SEP]:", last_token_logits[sep_token_id].item())
-
     return generated_tokens
 
 
 def main():
     # Example usage
-    input_text = "julian does not support "
+    input_text = "four score and seven years ago this nation "
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
-    print(f"Predicted next word: //  {predicted_word}")
+    # print(f"Predicted next word: //  {predicted_word}")
     # getting lots of PAD characters
 
 
