@@ -32,7 +32,7 @@ tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
 
 def tokenize_function(examples):
-    return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=5, return_tensors='pt')
+    return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=64, return_tensors='pt')
     # maybe increase max length to 512
 
 
@@ -44,7 +44,7 @@ class TransformerLMConfig(PretrainedConfig):
                  hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
-                 sequence_length=5,
+                 sequence_length=64,
 
                  # This inputs dropout probability to encourage robust behavior
                  hidden_dropout_prob = 0.2,

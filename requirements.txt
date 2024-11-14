@@ -1,6 +1,11 @@
 # This file may be used to create an environment using:
 # $ conda create --name <env> --file <this file>
 # platform: osx-64
+--extra-index-url https://download.pytorch.org/whl/cu116
+torch
+torchvision
+torchaudio
+
 accelerate=1.0.1=pypi_0
 aiohttp=3.9.5=py311h6c40b1e_0
 aiosignal=1.2.0=pyhd3eb1b0_0
