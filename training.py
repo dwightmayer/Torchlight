@@ -30,7 +30,7 @@ tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
 
 def tokenize_function(examples):
-    return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=64, return_tensors='pt')
+    return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=32, return_tensors='pt')
     # maybe increase max length to 512
 
 
@@ -42,11 +42,7 @@ class TransformerLMConfig(PretrainedConfig):
                  hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
-                 sequence_length=64,
-
-                 # This inputs dropout probability to encourage robust behavior
-                 hidden_dropout_prob = 0.2,
-                 attention_probs_dropout_prob = 0.2,
+                 sequence_length=32,
                  **kwargs):
 
         super().__init__(**kwargs)
@@ -59,6 +55,9 @@ class TransformerLMConfig(PretrainedConfig):
         self.n_heads = n_heads
         self.num_layers = num_layers
         self.sequence_length = sequence_length
+
+        self.hidden_dropout_prob = 0.2,
+        self.attention_probs_dropout_prob = 0.2,
 
         # Pythia 1B: n_layers = 16, d_model / embedding_dim(?) = 2048, n_heads=8, d_heads=256, batch_sizze=2M
         # Do I want to 4x n_layers and 32x embedding dimension...
