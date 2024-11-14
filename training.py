@@ -8,8 +8,6 @@ from torch.utils.data import DataLoader
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 
-import time
-
 # Get data
 ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', streaming=True, trust_remote_code=True) # 151 MB of  code (finetune)
 ds1 = load_dataset("wikipedia", "20220301.en", split='train', streaming=True, trust_remote_code=True) # 21GB of English Wikipedia // IterableDatasetDict 42
@@ -40,7 +38,7 @@ def tokenize_function(examples):
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
                  vocab_size=tokenizer.vocab_size,
-                 embedding_dim=128, # increasing embedding dimension rq
+                 embedding_dim=128,
                  hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
@@ -135,12 +133,12 @@ class TransformerDecoderLM(PreTrainedModel):
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
 
     def estimate_parameters(self):
-        # Gets estimateds count of the model
+        # Gets estimated count of the model
         d_model = self.config.embedding_dim
-        nlayers = self.config.num_layers
+        n_layers = self.config.num_layers
         vocab_size = self.config.vocab_size
-        ex1 = 12 * d_model**2 * nlayers + 8 * d_model * self.config.hidden_dim * nlayers
-        ex2 = (vocab_size * d_model) + (16 * d_model**2) * nlayers
+        ex1 = 12 * d_model**2 * n_layers + 8 * d_model * self.config.hidden_dim * n_layers
+        ex2 = (vocab_size * d_model) + (16 * d_model**2) * n_layers
 
         print(f'This model has {(min(ex1, ex2))/1e6:.1f}M - {max((ex1, ex2))/1e6:.1f}M parameters')
 
