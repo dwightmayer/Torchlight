@@ -162,7 +162,7 @@ def main():
     config = TransformerLMConfig()
     model = TransformerDecoderLM(config)
 
-    load_model = True
+    load_model = False
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 

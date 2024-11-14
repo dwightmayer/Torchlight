@@ -25,7 +25,7 @@ def generate_next_tokens(
 
     tokens = tokenizer(text,
                        return_tensors='pt',
-                       padding=True,
+                       padding='max_length', # changed from TRUE
                        truncation=True,
                        max_length=model.config.sequence_length)
 
@@ -82,7 +82,7 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "I like eating "
+    input_text = "the quick brown fox jumped over the lazy "
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     # print(f"Predicted next word: //  {predicted_word}")
     # getting lots of PAD characters
