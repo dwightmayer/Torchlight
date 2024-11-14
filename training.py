@@ -24,7 +24,7 @@ datasets = [ds1, ds2, ds5]
 dataset = concatenate_datasets(datasets)
 
 # Creates Dataloader using only text column /// ITERABLE
-dl = DataLoader(dataset, batch_size=100_000, shuffle=None, batch_sampler=None, sampler=None)
+dl = DataLoader(dataset, batch_size=1000, shuffle=None, batch_sampler=None, sampler=None)
 print('Dataloader created')
 
 
@@ -33,14 +33,15 @@ tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
 def tokenize_function(examples):
     return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=5, return_tensors='pt')
+    # maybe increase max length to 512
 
 
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
                  vocab_size=tokenizer.vocab_size,
-                 embedding_dim=256, # increasing embedding dimension rq
-                 hidden_dim=128,
+                 embedding_dim=128, # increasing embedding dimension rq
+                 hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
                  sequence_length=5,
@@ -147,14 +148,14 @@ class TransformerDecoderLM(PreTrainedModel):
 # Training arguments
 training_args = TrainingArguments(
     output_dir='./results',     # Output directory
-    num_train_epochs=100,       # Total number of training epochs
-    per_device_train_batch_size=16,  # Batch size per device // usually (256)
+    num_train_epochs=10,       # Total number of training epochs
+    per_device_train_batch_size=256,  # Batch size per device // usually (16)
     logging_dir='./logs',       # Directory for logs
-    logging_steps=100000,
+    logging_steps=1000,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=False,
-    fp16=True
+    use_cpu=True,
+    fp16=False
 )
 
 
@@ -164,7 +165,7 @@ def main():
     config = TransformerLMConfig()
     model = TransformerDecoderLM(config)
 
-    load_model = False
+    load_model = True
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
@@ -204,6 +205,7 @@ def main():
         torch.save(model.state_dict(), 'moonshot_alt.pt')
         model.load_state_dict(torch.load('moonshot_alt.pt'))
         print(f'Model training loop iteration complete')
+        stored_train_index += 1
 
         # Writes number to file for completed batch
         with open("number.txt", "w") as file:
@@ -212,6 +214,6 @@ def main():
 
 
 if __name__ == "__main__":
-    #main()
-    pass
+    main()
+    # pass
 
