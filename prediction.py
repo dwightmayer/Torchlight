@@ -57,37 +57,27 @@ def generate_next_tokens(
                 attention_mask = attention_mask[:, -model.config.sequence_length:]
 
             k = 10
+            # This needs last_token_logits to be above 10, usually should be the case...
             top_probs, top_indices = torch.topk(last_token_logits, k)
+            for i in range(k):
+                ith_largest_logit = top_probs[i].item() if i <= len(top_probs) else None
+                ith_token_string = tokenizer.convert_ids_to_tokens(top_indices[i].item()
+                                                                   if ith_largest_logit is not None else "N/A")
+                print(ith_token_string,  round(ith_largest_logit, 2))
 
-            # Extract the top logit and corresponding tokens
-            first_largest_logit = top_probs[0].item()
-            second_largest_logit = top_probs[1].item() if k > 1 else None
-            third_largest_logit = top_probs[2].item() if k > 2 else None
-
-            # Print the largest and second largest logit with their tokens
-            first_token_string = tokenizer.convert_ids_to_tokens(top_indices[0].item())
-            second_token_string = tokenizer.convert_ids_to_tokens(
-                top_indices[1].item()) if second_largest_logit is not None else "N/A"
-            third_logit_string = tokenizer.convert_ids_to_tokens(
-                top_indices[2].item()) if third_largest_logit is not None else "N/A"
-
-            print(round(first_largest_logit, 2), first_token_string)
-            print(round(second_largest_logit, 2), second_token_string)
-            print(round(third_largest_logit, 2), third_logit_string)
-
-    # when skip=True, I get '' as my prediction, skip=False gets me [SEP] x5 // unsure why.
+    # Try out changing this. Manifesting that I get good results from it.
     generated_tokens = tokenizer.decode(generated, skip_special_tokens=True)
     return generated_tokens
 
 
 def main():
     # Example usage
-    input_text = "the quick brown fox jumped over the lazy "
+    input_text = "i like eating "
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
-    # print(f"Predicted next word: //  {predicted_word}")
+    print(f"Predicted next word: //  {predicted_word}")
     # getting lots of PAD characters
     model.estimate_parameters()
-
+# some of this stuff takes so much time to install that my head explodes instantly
 
 if __name__ == "__main__":
     main()

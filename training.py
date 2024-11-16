@@ -132,7 +132,7 @@ class TransformerDecoderLM(PreTrainedModel):
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
 
     def estimate_parameters(self):
-        # Gets estimated count of the model
+        # Variables, equations for different parameter counts
         d_model = self.config.embedding_dim
         n_layers = self.config.num_layers
         vocab_size = self.config.vocab_size
