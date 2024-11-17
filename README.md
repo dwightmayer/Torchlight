@@ -7,3 +7,5 @@ Working with PyTorch
 - Iterating through the Dataset and keeping track of it in a notes file </3
 - If you don't fight, you can't win!!!
 - I should make an experiment log wrapper to monitor training over time
+- Model is starting to get a little chubby...
+- So many numbers... going to modularizem more soon.
