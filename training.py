@@ -40,7 +40,7 @@ def tokenize_function(examples):
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
                  vocab_size=tokenizer.vocab_size,
-                 embedding_dim=128, # setting this from 128 to 192... does it fit?
+                 embedding_dim=192, # setting this from 128 to 192... does it fit?
                  hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
@@ -84,10 +84,11 @@ class TransformerDecoderLM(PreTrainedModel):
                                                                batch_first=True)
         self.transformer = nn.TransformerDecoder(decoder_transformer_layer, num_layers=config.num_layers)
 
-        # Final linear layer for word prediction.py
+        # Final linear layer for word prediction.py and checkpointing
         self.fc = nn.Linear(config.embedding_dim, config.vocab_size)
+        self.supports_gradient_checkpointing = True
 
-    def forward(self, input_ids, labels=None):
+    def forward(self, input_ids, labels=None, use_cache=None):
 
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
@@ -98,8 +99,28 @@ class TransformerDecoderLM(PreTrainedModel):
         # Create causal mask (upper triangular to prevent attending to future tokens)
         tgt_mask = self.generate_square_subsequent_mask(seq_len)
 
+        # Disable cache if gradient checkpointing is enabled
+        if use_cache is None:
+            use_cache = not self.training or not self.supports_gradient_checkpointing
+
+        # In the forward method, when using transformer:
+        if self.supports_gradient_checkpointing and self.training:
+            transformer_out = torch.utils.checkpoint.checkpoint(
+                    self.transformer,
+                    tgt = embeds,
+                    memory=embeds,
+                    tgt_mask=tgt_mask,
+                    use_reentrant=False  # Add this for newer PyTorch versions
+                )
+        else:
+            transformer_out = self.transformer(
+                    embeds,
+                    memory=embeds,
+                    tgt_mask=tgt_mask
+                )
+
         # Gets transformer outputs, predicts last token in the sequence
-        transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
+        # transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
         logits = self.fc(transformer_out)
 
         loss = None
@@ -118,6 +139,26 @@ class TransformerDecoderLM(PreTrainedModel):
             loss = loss_fn(logits, labels)
 
         return {"loss": loss, "logits": logits}
+
+    # Cheeky new set of methods to ensure compatibility with checkpointing
+    def _set_gradient_checkpointing(self, module, value=False):
+        """Enable or disable gradient checkpointing (for transformer layers!!!)"""
+        if isinstance(module, nn.TransformerDecoder):
+            module.use_checkpoint = value
+
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        """Enable gradient checkpointing"""
+        # Error handling if GC / model class tweaking
+        if not self.supports_gradient_checkpointing:
+            raise ValueError(f"{self.__class__.__name__} does not support gradient checkpointing.")
+
+        self.apply(lambda m: self._set_gradient_checkpointing(m, True))
+
+    def gradient_checkpointing_disable(self):
+        """Disable gradient checkpointing for the model."""
+
+        # Should I add more error handling here?
+        self.apply(lambda m: self._set_gradient_checkpointing(m, False))
 
     def generate_positional_encoding(self, dim, max_len):
         # This gets the positional encoding
@@ -154,7 +195,9 @@ training_args = TrainingArguments(
     save_steps=1000,
     save_total_limit=3,
     use_cpu=True,
-    fp16=False
+    fp16=False,
+    gradient_checkpointing=True,
+    gradient_accumulation_steps=4,  # Gradient accumulation
 )
 
 
@@ -198,7 +241,6 @@ def main():
             model=model,
             args=training_args,
             train_dataset=train_dataset,
-            gradient_checkpointing=True
         )
         # Trains, saves, and checkpoints.
         trainer.train()
@@ -215,5 +257,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # pass
 
