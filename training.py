@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 
+from accelerate import Accelerator
+
 # Get data
 ds0 = load_dataset("openbmb/UltraInteract_sft", split='train', streaming=True, trust_remote_code=True) # 151 MB of  code (finetune)
 ds1 = load_dataset("wikipedia", "20220301.en", split='train', streaming=True, trust_remote_code=True) # 21GB of English Wikipedia // IterableDatasetDict 42
@@ -38,7 +40,7 @@ def tokenize_function(examples):
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
                  vocab_size=tokenizer.vocab_size,
-                 embedding_dim=128,
+                 embedding_dim=128, # setting this from 128 to 192... does it fit?
                  hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
@@ -196,6 +198,7 @@ def main():
             model=model,
             args=training_args,
             train_dataset=train_dataset,
+            gradient_checkpointing=True
         )
         # Trains, saves, and checkpoints.
         trainer.train()
