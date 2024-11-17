@@ -3,7 +3,7 @@ import torch.nn as nn
 from transformers import AutoTokenizer
 from training import TransformerDecoderLM, TransformerLMConfig
 
-# Load a pretrained tokenizer or the one you used for training
+# Load a pretrained tokenizer
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
 # Instantiate the model and load the weights from previous scripts
@@ -63,7 +63,10 @@ def generate_next_tokens(
                 ith_largest_logit = top_probs[i].item() if i <= len(top_probs) else None
                 ith_token_string = tokenizer.convert_ids_to_tokens(top_indices[i].item()
                                                                    if ith_largest_logit is not None else "N/A")
+
+                print(f'{i+1}th most likely token prediction')
                 print(ith_token_string,  round(ith_largest_logit, 2))
+                print()
 
     # Try out changing this. Manifesting that I get good results from it.
     generated_tokens = tokenizer.decode(generated, skip_special_tokens=True)

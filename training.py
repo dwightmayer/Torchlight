@@ -39,7 +39,7 @@ def tokenize_function(examples):
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
-                 vocab_size=tokenizer.vocab_size,
+                 vocab_size=tokenizer.vocab_size, # I might make tokenizer an attribute
                  embedding_dim=192, # setting this from 128 to 192... does it fit?
                  hidden_dim=512,
                  n_heads=16,
@@ -93,31 +93,24 @@ class TransformerDecoderLM(PreTrainedModel):
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
 
-        # Creates embeddings with positional encodings
+        # Creates embeddings with positional encodings :)
         embeds = self.embedding(input_ids) + self.pos_encoding[:seq_len, :]
 
-        # Create causal mask (upper triangular to prevent attending to future tokens)
+        # Create causal mask (upper triangular to prevent checking out future tokens)
         tgt_mask = self.generate_square_subsequent_mask(seq_len)
 
-        # Disable cache if gradient checkpointing is enabled
+        # Disable cache if gradient checkpointing
         if use_cache is None:
             use_cache = not self.training or not self.supports_gradient_checkpointing
 
-        # In the forward method, when using transformer:
+        # Uses gradient checkpointing if enabled, normal processing if not:
         if self.supports_gradient_checkpointing and self.training:
             transformer_out = torch.utils.checkpoint.checkpoint(
-                    self.transformer,
-                    tgt = embeds,
-                    memory=embeds,
-                    tgt_mask=tgt_mask,
-                    use_reentrant=False  # Add this for newer PyTorch versions
+                    self.transformer, tgt=embeds, memory=embeds, tgt_mask=tgt_mask,
+                    # use_reentrant=False  # Add this for newer PyTorch versions // idk
                 )
         else:
-            transformer_out = self.transformer(
-                    embeds,
-                    memory=embeds,
-                    tgt_mask=tgt_mask
-                )
+            transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
 
         # Gets transformer outputs, predicts last token in the sequence
         # transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
@@ -140,7 +133,7 @@ class TransformerDecoderLM(PreTrainedModel):
 
         return {"loss": loss, "logits": logits}
 
-    # Cheeky new set of methods to ensure compatibility with checkpointing
+    # Cheeky new set of methods to ensure compatibility HF checkpoints
     def _set_gradient_checkpointing(self, module, value=False):
         """Enable or disable gradient checkpointing (for transformer layers!!!)"""
         if isinstance(module, nn.TransformerDecoder):
@@ -156,7 +149,6 @@ class TransformerDecoderLM(PreTrainedModel):
 
     def gradient_checkpointing_disable(self):
         """Disable gradient checkpointing for the model."""
-
         # Should I add more error handling here?
         self.apply(lambda m: self._set_gradient_checkpointing(m, False))
 
@@ -200,6 +192,7 @@ training_args = TrainingArguments(
     gradient_accumulation_steps=4,  # Gradient accumulation
 )
 
+# This training loop could be abstracted out somewhat. Model script needs tokenizer...
 
 def main():
 
@@ -212,9 +205,12 @@ def main():
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
     stored_train_index = 0
+    pick_up = False
     try:
         with open("number.txt", "r") as file:
-            stored_train_index = int(file.read())
+            # If desired to start from last saved batch index
+            if pick_up:
+                stored_train_index = int(file.read())
     except FileNotFoundError:
         print("Error: The file was not found.")
     except Exception as e:
@@ -230,7 +226,8 @@ def main():
 
         batch_data = Dataset.from_dict(ex)
         tokenized_datasets = batch_data.map(tokenize_function, batched=True)
-
+        # tokenized datasets is a pytorch arrow dataset, whatever that means...
+        print(type(tokenized_datasets))
         # shuffle the phone number vs. take a random number
         train_dataset = Dataset.from_dict(
             {'input_ids': [x['input_ids'] for x in tokenized_datasets],
@@ -246,6 +243,7 @@ def main():
         trainer.train()
         torch.save(model.state_dict(), 'moonshot_alt.pt')
         model.load_state_dict(torch.load('moonshot_alt.pt'))
+        print('vocab size', model.config.vocab_size)
         print(f'Model training loop iteration complete')
         stored_train_index += 1
 
@@ -256,5 +254,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # TO DO
+    # -- track vocab size over tokenizer instances? does it fluctuate?
+    # -- make this code actually good
+    # -- stop the lies. spread the word.
+
     main()
 
