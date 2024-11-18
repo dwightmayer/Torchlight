@@ -75,7 +75,7 @@ def generate_next_tokens(
 
 def main():
     # Example usage
-    input_text = "i like eating "
+    input_text = "i like eating"
     predicted_word = generate_next_tokens(model=model, text=input_text, tokenizer=tokenizer)
     # getting lots of PAD characters
     model.estimate_parameters()

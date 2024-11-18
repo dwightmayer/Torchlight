@@ -40,7 +40,7 @@ def tokenize_function(examples):
 class TransformerLMConfig(PretrainedConfig):
     def __init__(self,
                  vocab_size=tokenizer.vocab_size, # I might make tokenizer an attribute
-                 embedding_dim=192, # setting this from 128 to 192... does it fit?
+                 embedding_dim=192,# setting this from 128 to 192... does it fit?
                  hidden_dim=512,
                  n_heads=16,
                  num_layers=16,
@@ -107,7 +107,7 @@ class TransformerDecoderLM(PreTrainedModel):
         if self.supports_gradient_checkpointing and self.training:
             transformer_out = torch.utils.checkpoint.checkpoint(
                     self.transformer, tgt=embeds, memory=embeds, tgt_mask=tgt_mask,
-                    # use_reentrant=False  # Add this for newer PyTorch versions // idk
+                    use_reentrant=False  # Add this for newer PyTorch versions // idk
                 )
         else:
             transformer_out = self.transformer(embeds, memory=embeds, tgt_mask=tgt_mask)
@@ -194,18 +194,19 @@ training_args = TrainingArguments(
 
 # This training loop could be abstracted out somewhat. Model script needs tokenizer...
 
+
 def main():
 
     # Loads up model and config
     config = TransformerLMConfig()
     model = TransformerDecoderLM(config)
 
-    load_model = False
+    load_model = True
     if load_model:
         model.load_state_dict(torch.load('moonshot_alt.pt'))
 
     stored_train_index = 0
-    pick_up = False
+    pick_up = True
     try:
         with open("number.txt", "r") as file:
             # If desired to start from last saved batch index
@@ -227,7 +228,7 @@ def main():
         batch_data = Dataset.from_dict(ex)
         tokenized_datasets = batch_data.map(tokenize_function, batched=True)
         # tokenized datasets is a pytorch arrow dataset, whatever that means...
-        print(type(tokenized_datasets))
+
         # shuffle the phone number vs. take a random number
         train_dataset = Dataset.from_dict(
             {'input_ids': [x['input_ids'] for x in tokenized_datasets],
