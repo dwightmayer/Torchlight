@@ -44,8 +44,8 @@ training_args = TrainingArguments(
     logging_steps=1000,
     save_steps=1000,
     save_total_limit=3,
-    use_cpu=True,
-    fp16=False,
+    use_cpu=False,
+    fp16=True,
     gradient_checkpointing=True,
     gradient_accumulation_steps=4,  # Gradient accumulation
 )
@@ -57,13 +57,13 @@ def main():
     config = TransformerLMConfig(tokenizer=tokenizer)
     model = TransformerDecoderLM(config)
 
-    load_model = True
+    load_model = False
     if load_model:
         model = reassemble_model(model)
 
     # This txt stores the last batch
     stored_train_index = 0
-    pick_up = True
+    pick_up = False
     try:
         with open("number.txt", "r") as file:
             # If desired to start from last saved batch index
