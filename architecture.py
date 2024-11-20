@@ -5,7 +5,7 @@ from torch import nn
 from transformers import PreTrainedModel, PretrainedConfig
 import numpy as np
 
-
+# get a model.yaml file
 
 # Model Config class for Hugging Face compatibility
 class TransformerLMConfig(PretrainedConfig):
